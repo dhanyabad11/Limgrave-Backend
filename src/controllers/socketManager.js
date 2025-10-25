@@ -27,28 +27,36 @@ export const connectToSocket = (server) => {
             if (connections[path] === undefined) {
                 connections[path] = [];
             }
-            
+
             timeOnline[socket.id] = new Date();
             usernames[socket.id] = username || "Participant";
 
             console.log("   - Stored username:", usernames[socket.id]);
             console.log("   - Current users in room:", connections[path]);
-            
-            // Notify only EXISTING users about the new user (not the new user itself)
+
+            // Notify only EXISTING users about the new user joining
             connections[path].forEach((existingUserId) => {
-                console.log("   - Notifying existing user:", existingUserId);
+                console.log("   - Notifying existing user:", existingUserId, "about new user:", socket.id);
                 io.to(existingUserId).emit(
                     "user-joined",
                     socket.id, // The new user's ID
-                    connections[path], // Current list (doesn't include new user yet)
+                    connections[path].concat(socket.id), // Include the new user in the list
                     usernames
                 );
             });
-            
+
             // NOW add the new user to the connections
             connections[path].push(socket.id);
-            
+
             console.log("   - Added new user. Updated room:", connections[path]);
+
+            // Tell the NEW user about all existing users (and themselves)
+            io.to(socket.id).emit(
+                "user-joined",
+                socket.id, // Their own ID (they'll skip it on the frontend)
+                connections[path], // Now includes everyone including the new user
+                usernames
+            );
 
             // Send chat history to the new user
             if (messages[path] !== undefined) {

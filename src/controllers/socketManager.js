@@ -27,24 +27,30 @@ export const connectToSocket = (server) => {
             if (connections[path] === undefined) {
                 connections[path] = [];
             }
-            connections[path].push(socket.id);
-
+            
             timeOnline[socket.id] = new Date();
-            usernames[socket.id] = username || "Participant"; // Store username
+            usernames[socket.id] = username || "Participant";
 
             console.log("   - Stored username:", usernames[socket.id]);
-            console.log("   - All usernames:", usernames);
-
-            for (let a = 0; a < connections[path].length; a++) {
-                console.log("   - Notifying client:", connections[path][a]);
-                io.to(connections[path][a]).emit(
+            console.log("   - Current users in room:", connections[path]);
+            
+            // Notify only EXISTING users about the new user (not the new user itself)
+            connections[path].forEach((existingUserId) => {
+                console.log("   - Notifying existing user:", existingUserId);
+                io.to(existingUserId).emit(
                     "user-joined",
-                    socket.id,
-                    connections[path],
+                    socket.id, // The new user's ID
+                    connections[path], // Current list (doesn't include new user yet)
                     usernames
                 );
-            }
+            });
+            
+            // NOW add the new user to the connections
+            connections[path].push(socket.id);
+            
+            console.log("   - Added new user. Updated room:", connections[path]);
 
+            // Send chat history to the new user
             if (messages[path] !== undefined) {
                 for (let a = 0; a < messages[path].length; ++a) {
                     io.to(socket.id).emit(

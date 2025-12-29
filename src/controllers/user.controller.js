@@ -7,47 +7,47 @@ const login = async (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
-        return res.status(400).json({ message: "Please Provide" })
+        return res.status(400).json({ message: "Please Provide" });
     }
 
     try {
-        const user = await prisma.user.findUnique({ 
-            where: { username }
+        const user = await prisma.user.findUnique({
+            where: { username },
         });
-        
+
         if (!user) {
-            return res.status(httpStatus.NOT_FOUND).json({ message: "User Not Found" })
+            return res.status(httpStatus.NOT_FOUND).json({ message: "User Not Found" });
         }
 
-        let isPasswordCorrect = await bcrypt.compare(password, user.password)
+        let isPasswordCorrect = await bcrypt.compare(password, user.password);
 
         if (isPasswordCorrect) {
             let token = crypto.randomBytes(20).toString("hex");
 
             await prisma.user.update({
                 where: { id: user.id },
-                data: { token: token }
+                data: { token: token },
             });
-            
-            return res.status(httpStatus.OK).json({ token: token })
+
+            return res.status(httpStatus.OK).json({ token: token });
         } else {
-            return res.status(httpStatus.UNAUTHORIZED).json({ message: "Invalid Username or password" })
+            return res
+                .status(httpStatus.UNAUTHORIZED)
+                .json({ message: "Invalid Username or password" });
         }
-
     } catch (e) {
-        return res.status(500).json({ message: `Something went wrong ${e}` })
+        return res.status(500).json({ message: `Something went wrong ${e}` });
     }
-}
-
+};
 
 const register = async (req, res) => {
     const { name, username, password } = req.body;
 
     try {
-        const existingUser = await prisma.user.findUnique({ 
-            where: { username }
+        const existingUser = await prisma.user.findUnique({
+            where: { username },
         });
-        
+
         if (existingUser) {
             return res.status(httpStatus.FOUND).json({ message: "User already exists" });
         }
@@ -58,48 +58,46 @@ const register = async (req, res) => {
             data: {
                 name: name,
                 username: username,
-                password: hashedPassword
-            }
+                password: hashedPassword,
+            },
         });
 
-        res.status(httpStatus.CREATED).json({ message: "User Registered" })
-
+        res.status(httpStatus.CREATED).json({ message: "User Registered" });
     } catch (e) {
-        res.json({ message: `Something went wrong ${e}` })
+        res.json({ message: `Something went wrong ${e}` });
     }
-}
-
+};
 
 const getUserHistory = async (req, res) => {
     const { token } = req.query;
 
     try {
-        const user = await prisma.user.findUnique({ 
-            where: { token: token }
+        const user = await prisma.user.findUnique({
+            where: { token: token },
         });
-        
+
         if (!user) {
             return res.status(httpStatus.NOT_FOUND).json({ message: "User not found" });
         }
-        
-        const meetings = await prisma.meeting.findMany({ 
-            where: { userId: user.id }
+
+        const meetings = await prisma.meeting.findMany({
+            where: { userId: user.id },
         });
-        
-        res.json(meetings)
+
+        res.json(meetings);
     } catch (e) {
-        res.json({ message: `Something went wrong ${e}` })
+        res.json({ message: `Something went wrong ${e}` });
     }
-}
+};
 
 const addToHistory = async (req, res) => {
     const { token, meeting_code } = req.body;
 
     try {
-        const user = await prisma.user.findUnique({ 
-            where: { token: token }
+        const user = await prisma.user.findUnique({
+            where: { token: token },
         });
-        
+
         if (!user) {
             return res.status(httpStatus.NOT_FOUND).json({ message: "User not found" });
         }
@@ -107,15 +105,14 @@ const addToHistory = async (req, res) => {
         await prisma.meeting.create({
             data: {
                 userId: user.id,
-                meetingCode: meeting_code
-            }
+                meetingCode: meeting_code,
+            },
         });
 
-        res.status(httpStatus.CREATED).json({ message: "Added code to history" })
+        res.status(httpStatus.CREATED).json({ message: "Added code to history" });
     } catch (e) {
-        res.json({ message: `Something went wrong ${e}` })
+        res.json({ message: `Something went wrong ${e}` });
     }
-}
+};
 
-
-export { login, register, getUserHistory, addToHistory }
+export { login, register, getUserHistory, addToHistory };

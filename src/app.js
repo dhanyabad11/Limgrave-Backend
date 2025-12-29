@@ -27,7 +27,7 @@ const start = async () => {
         // Test Prisma connection
         await prisma.$connect();
         console.log("✅ Connected to Neon PostgreSQL Database");
-        
+
         server.listen(app.get("port"), () => {
             console.log(`🚀 Server listening on PORT ${app.get("port")}`);
         });
@@ -38,7 +38,7 @@ const start = async () => {
 };
 
 // Graceful shutdown
-process.on('SIGINT', async () => {
+process.on("SIGINT", async () => {
     await prisma.$disconnect();
     process.exit(0);
 });

@@ -1,11 +1,9 @@
 import httpStatus from "http-status";
-import { User } from "../models/user.model.js";
-import bcrypt, { hash } from "bcrypt"
+import bcrypt from "bcrypt";
+import crypto from "crypto";
+import prisma from "../db/prisma.js";
 
-import crypto from "crypto"
-import { Meeting } from "../models/meeting.model.js";
 const login = async (req, res) => {
-
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -13,19 +11,24 @@ const login = async (req, res) => {
     }
 
     try {
-        const user = await User.findOne({ username });
+        const user = await prisma.user.findUnique({ 
+            where: { username }
+        });
+        
         if (!user) {
             return res.status(httpStatus.NOT_FOUND).json({ message: "User Not Found" })
         }
-
 
         let isPasswordCorrect = await bcrypt.compare(password, user.password)
 
         if (isPasswordCorrect) {
             let token = crypto.randomBytes(20).toString("hex");
 
-            user.token = token;
-            await user.save();
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { token: token }
+            });
+            
             return res.status(httpStatus.OK).json({ token: token })
         } else {
             return res.status(httpStatus.UNAUTHORIZED).json({ message: "Invalid Username or password" })
@@ -40,29 +43,30 @@ const login = async (req, res) => {
 const register = async (req, res) => {
     const { name, username, password } = req.body;
 
-
     try {
-        const existingUser = await User.findOne({ username });
+        const existingUser = await prisma.user.findUnique({ 
+            where: { username }
+        });
+        
         if (existingUser) {
             return res.status(httpStatus.FOUND).json({ message: "User already exists" });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const newUser = new User({
-            name: name,
-            username: username,
-            password: hashedPassword
+        await prisma.user.create({
+            data: {
+                name: name,
+                username: username,
+                password: hashedPassword
+            }
         });
-
-        await newUser.save();
 
         res.status(httpStatus.CREATED).json({ message: "User Registered" })
 
     } catch (e) {
         res.json({ message: `Something went wrong ${e}` })
     }
-
 }
 
 
@@ -70,8 +74,18 @@ const getUserHistory = async (req, res) => {
     const { token } = req.query;
 
     try {
-        const user = await User.findOne({ token: token });
-        const meetings = await Meeting.find({ user_id: user.username })
+        const user = await prisma.user.findUnique({ 
+            where: { token: token }
+        });
+        
+        if (!user) {
+            return res.status(httpStatus.NOT_FOUND).json({ message: "User not found" });
+        }
+        
+        const meetings = await prisma.meeting.findMany({ 
+            where: { userId: user.id }
+        });
+        
         res.json(meetings)
     } catch (e) {
         res.json({ message: `Something went wrong ${e}` })
@@ -82,14 +96,20 @@ const addToHistory = async (req, res) => {
     const { token, meeting_code } = req.body;
 
     try {
-        const user = await User.findOne({ token: token });
+        const user = await prisma.user.findUnique({ 
+            where: { token: token }
+        });
+        
+        if (!user) {
+            return res.status(httpStatus.NOT_FOUND).json({ message: "User not found" });
+        }
 
-        const newMeeting = new Meeting({
-            user_id: user.username,
-            meetingCode: meeting_code
-        })
-
-        await newMeeting.save();
+        await prisma.meeting.create({
+            data: {
+                userId: user.id,
+                meetingCode: meeting_code
+            }
+        });
 
         res.status(httpStatus.CREATED).json({ message: "Added code to history" })
     } catch (e) {

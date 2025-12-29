@@ -1,11 +1,13 @@
 import express from "express";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
-import mongoose from "mongoose";
 import { connectToSocket } from "./controllers/socketManager.js";
 import cors from "cors";
 import userRoutes from "./routes/users.routes.js";
+import iceRoutes from "./routes/ice.routes.js";
 import dotenv from "dotenv";
+import prisma from "./db/prisma.js";
+
 dotenv.config();
 
 const app = express();
@@ -18,15 +20,27 @@ app.use(express.json({ limit: "40kb" }));
 app.use(express.urlencoded({ limit: "40kb", extended: true }));
 
 app.use("/api/v1/users", userRoutes);
+app.use("/api/v1", iceRoutes);
 
 const start = async () => {
-    app.set("mongo_user");
-    const connectionDb = await mongoose.connect(process.env.MONGODB_URI);
-
-    console.log(`MONGO Connected DB Host: ${connectionDb.connection.host}`);
-    server.listen(app.get("port"), () => {
-        console.log(`LISTENING ON PORT ${app.get("port")}`);
-    });
+    try {
+        // Test Prisma connection
+        await prisma.$connect();
+        console.log("✅ Connected to Neon PostgreSQL Database");
+        
+        server.listen(app.get("port"), () => {
+            console.log(`🚀 Server listening on PORT ${app.get("port")}`);
+        });
+    } catch (error) {
+        console.error("❌ Database connection failed:", error);
+        process.exit(1);
+    }
 };
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+    await prisma.$disconnect();
+    process.exit(0);
+});
 
 start();

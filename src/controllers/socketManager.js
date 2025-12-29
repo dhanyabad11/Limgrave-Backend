@@ -36,7 +36,12 @@ export const connectToSocket = (server) => {
 
             // Notify only EXISTING users about the new user joining
             connections[path].forEach((existingUserId) => {
-                console.log("   - Notifying existing user:", existingUserId, "about new user:", socket.id);
+                console.log(
+                    "   - Notifying existing user:",
+                    existingUserId,
+                    "about new user:",
+                    socket.id
+                );
                 io.to(existingUserId).emit(
                     "user-joined",
                     socket.id, // The new user's ID

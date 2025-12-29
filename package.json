@@ -7,7 +7,8 @@
     "scripts": {
         "dev": "nodemon src/app.js",
         "start": "node src/app.js",
-        "build": "prisma generate",
+        "build": "npx prisma generate",
+        "postinstall": "npx prisma generate",
         "prod": "pm2 src/app.js"
     },
     "author": "dhanyabad",
